@@ -60,7 +60,7 @@ body{background-color:#d8bf91;background-image:radial-gradient(ellipse at 15% 15
 .stage.open:not(.show-cake) .left-page{opacity:1;visibility:visible;pointer-events:auto}
 .stage.open:not(.show-cake) .right-page{opacity:0;visibility:hidden;pointer-events:none}
 .stage.show-cake .left-page{opacity:0;visibility:hidden;pointer-events:none}
-.stage.show-cake .right-page{opacity:1;visibility:visible;pointer-events:auto;transform-origin:left center;backface-visibility:hidden;animation:single-page-turn-in .65s cubic-bezier(.2,.75,.2,1) both}
+.stage.show-cake .right-page{opacity:1;visibility:visible;pointer-events:auto;transform-origin:left center;backface-visibility:hidden;animation:none}
 @keyframes single-page-turn-in{from{opacity:0;transform:perspective(900px) rotateY(-12deg) translateX(4%)}to{opacity:1;transform:perspective(900px) rotateY(0) translateX(0)}}
 .stage.open .cover,.stage.open .cover{left:0;width:100%}
 .envelope-wrap{width:min(94%,460px);height:auto;max-height:none;min-height:0;flex:1;margin:14px auto 8px;display:flex;align-items:center;justify-content:center;overflow:visible}
@@ -107,6 +107,28 @@ body{background-color:#d8bf91;background-image:radial-gradient(ellipse at 15% 15
  .mail-open-button{width:min(82%,300px)}.mail-open-hint{font-size:7px;letter-spacing:.1em;margin-top:8px}
  .envelope-wrap.is-open .mail-open-button{top:76%;transform:translate(-50%,-50%) scale(.64)}
 }
+
+/* Quick, no-delay return from cake page to the letter. */
+.stage.return-letter .left-page{visibility:visible;transition:none!important;animation:letter-return .36s cubic-bezier(.18,.8,.24,1) both!important}
+.stage.return-letter .right-page{transition:none!important}
+@keyframes letter-return{from{opacity:0;transform:translateX(-18px) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}}
+
+/* Physical sheet flip between the letter and cake pages. */
+.stage.open.turning-forward .left-page{opacity:1;visibility:visible;pointer-events:none;z-index:4;transform-origin:left center;-webkit-backface-visibility:hidden;backface-visibility:hidden;animation:turn-letter-away .72s cubic-bezier(.45,.05,.2,1) both}
+.stage.open.turning-forward .right-page{opacity:1;visibility:visible;pointer-events:none;z-index:1;animation:none}
+.stage.open.show-cake.turning-back .left-page{opacity:1;visibility:visible;pointer-events:none;z-index:1;animation:none}
+.stage.open.show-cake.turning-back .right-page{opacity:1;visibility:visible;pointer-events:none;z-index:4;transform-origin:right center;-webkit-backface-visibility:hidden;backface-visibility:hidden;animation:turn-cake-away .72s cubic-bezier(.45,.05,.2,1) both}
+.stage.turning-forward .page-nav,.stage.turning-back .page-nav{pointer-events:none}
+@keyframes turn-letter-away{0%{transform:perspective(1400px) rotateY(0deg)}48%{transform:perspective(1400px) rotateY(-92deg)}100%{transform:perspective(1400px) rotateY(-180deg)}}
+@keyframes turn-cake-away{0%{transform:perspective(1400px) rotateY(0deg)}48%{transform:perspective(1400px) rotateY(92deg)}100%{transform:perspective(1400px) rotateY(180deg)}}
+@media(prefers-reduced-motion:reduce){.stage.turning-forward .left-page,.stage.turning-back .right-page{animation-duration:.38s!important}}
+
+/* Keep one flip active at a time; suppress the old intro animation once the cover is open. */
+.stage.open:not(.turning-forward):not(.turning-back) .left-page,.stage.open:not(.turning-forward):not(.turning-back) .right-page{animation:none!important}
+.stage.open.turning-forward .left-page{animation:turn-letter-away .68s cubic-bezier(.45,.05,.2,1) 1 both}
+.stage.open.show-cake.turning-back .right-page{animation:turn-cake-away .68s cubic-bezier(.45,.05,.2,1) 1 both}
+@keyframes turn-letter-away{0%{transform:rotateY(0deg)}48%{transform:rotateY(-92deg)}100%{transform:rotateY(-180deg)}}
+@keyframes turn-cake-away{0%{transform:rotateY(0deg)}48%{transform:rotateY(92deg)}100%{transform:rotateY(180deg)}}
 </style>
 </head>
 <body><div class="grain" aria-hidden="true"></div><div class="floral-layer" id="floralLayer" aria-hidden="true"></div><main class="page-shell"><header class="topline"><span>a small book of birthday wishes</span><span class="heart">♥</span><span>made across the miles</span></header>
@@ -128,12 +150,16 @@ const flameArt = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 170">
 const coverImg=document.getElementById('coverImg'),envelopeImg=document.getElementById('envelopeImg'),cakeImg=document.getElementById('cakeImg'),flames=document.getElementById('flames');coverImg.src=toData(coverArt);envelopeImg.src=toData(envelopeArt);cakeImg.src=toData(cakeArt);for(let i=0;i<3;i++){const img=document.createElement('img');img.className='flame';img.src=toData(flameArt);img.alt='';flames.appendChild(img)}
 document.querySelectorAll('.right-title span').forEach((cut,index)=>{cut.style.setProperty('--tilt',(Math.random()*8-4)+'deg');cut.style.setProperty('--n',String(index))});
 const stage=document.getElementById('stage'),cover=document.getElementById('cover'),backButton=document.getElementById('backButton'),letter=document.getElementById('letter'),envelopeWrap=document.getElementById('envelopeWrap'),mailOpenButton=document.getElementById('mailOpenButton'),nextPageButton=document.getElementById('nextPageButton'),previousPageButton=document.getElementById('previousPageButton');
-function openCard(){if(stage.classList.contains('open'))return;stage.classList.remove('show-cake','letter-open');envelopeWrap.classList.remove('is-open');mailOpenButton.setAttribute('aria-expanded','false');stage.classList.add('open');cover.setAttribute('aria-expanded','true');setTimeout(()=>{if(stage.classList.contains('open'))mailOpenButton.focus({preventScroll:true})},1200)}function closeCard(){stage.classList.remove('open','show-cake','letter-open');envelopeWrap.classList.remove('is-open');mailOpenButton.setAttribute('aria-expanded','false');cover.setAttribute('aria-expanded','false');cover.focus({preventScroll:true})}cover.addEventListener('click',openCard);backButton.addEventListener('click',closeCard);mailOpenButton.addEventListener('click',()=>{const opened=envelopeWrap.classList.toggle('is-open');stage.classList.toggle('letter-open',opened);mailOpenButton.setAttribute('aria-expanded',String(opened))});nextPageButton.addEventListener('click',()=>{if(!stage.classList.contains('letter-open'))return;stage.classList.add('show-cake');setTimeout(()=>previousPageButton.focus({preventScroll:true}),650)});previousPageButton.addEventListener('click',()=>{stage.classList.remove('show-cake');setTimeout(()=>nextPageButton.focus({preventScroll:true}),450)});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&stage.classList.contains('open'))closeCard()});
+function openCard(){if(stage.classList.contains('open'))return;stage.classList.remove('show-cake','letter-open','return-letter');envelopeWrap.classList.remove('is-open');mailOpenButton.setAttribute('aria-expanded','false');stage.classList.add('open');cover.setAttribute('aria-expanded','true');setTimeout(()=>{if(stage.classList.contains('open'))mailOpenButton.focus({preventScroll:true})},1200)}function closeCard(){stage.classList.remove('open','show-cake','letter-open','return-letter');envelopeWrap.classList.remove('is-open');mailOpenButton.setAttribute('aria-expanded','false');cover.setAttribute('aria-expanded','false');cover.focus({preventScroll:true})}cover.addEventListener('click',openCard);backButton.addEventListener('click',closeCard);mailOpenButton.addEventListener('click',()=>{const opened=envelopeWrap.classList.toggle('is-open');stage.classList.toggle('letter-open',opened);mailOpenButton.setAttribute('aria-expanded',String(opened))});nextPageButton.addEventListener('click',()=>{if(!stage.classList.contains('letter-open')||stage.classList.contains('turning-forward')||stage.classList.contains('turning-back'))return;stage.classList.remove('return-letter');stage.classList.add('turning-forward');setTimeout(()=>{if(stage.classList.contains('open')&&stage.classList.contains('turning-forward')){stage.classList.remove('turning-forward');stage.classList.add('show-cake');previousPageButton.focus({preventScroll:true})}},720)});previousPageButton.addEventListener('click',()=>{if(stage.classList.contains('turning-forward')||stage.classList.contains('turning-back'))return;stage.classList.add('turning-back');setTimeout(()=>{if(stage.classList.contains('open')&&stage.classList.contains('turning-back')){stage.classList.remove('show-cake','turning-back','return-letter');nextPageButton.focus({preventScroll:true})}},720)});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&stage.classList.contains('open'))closeCard()});
 const wishMessage=document.getElementById('wishMessage'),relightButton=document.getElementById('relightButton'),holdButton=document.getElementById('holdButton');let blown=false,holdTimer=null;
 function setBending(on){if(!blown)flames.classList.toggle('blowing',on)}function blowOut(){if(blown)return;blown=true;flames.classList.remove('blowing');flames.classList.add('out');wishMessage.textContent="May every wish you make today find its way to you. Happy birthday, my favorite person ♡";relightButton.classList.add('visible');document.querySelector('.right-page .page-inner').classList.add('is-blown');confettiBurst()}function beginHold(e){if(blown)return;e.preventDefault();if(holdTimer)return;holdBegan=performance.now();setBending(true);holdTimer=setTimeout(()=>{blowOut();endHold()},520)}function endHold(){if(holdTimer){clearTimeout(holdTimer);holdTimer=null}if(!blown)setBending(false)}holdButton.addEventListener('pointerdown',beginHold);['pointerup','pointerleave','pointercancel'].forEach(type=>holdButton.addEventListener(type,endHold));document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.target.closest('button,input,textarea')){e.preventDefault();beginHold(e)}});document.addEventListener('keyup',e=>{if(e.code==='Space')endHold()});
 relightButton.addEventListener('click',()=>{blown=false;flames.classList.remove('out','blowing');wishMessage.textContent='';relightButton.classList.remove('visible');document.querySelector('.right-page .page-inner').classList.remove('is-blown')});function confettiBurst(){const colors=['#b55f49','#e5bd78','#778363','#f4e2bf','#cc8978'];for(let i=0;i<68;i++){const p=document.createElement('i');p.className='confetti';p.style.setProperty('--x',Math.random()*100+'vw');p.style.setProperty('--size',(5+Math.random()*8)+'px');p.style.setProperty('--color',colors[i%colors.length]);p.style.setProperty('--round',Math.random()>.55?'50%':'1px');p.style.setProperty('--duration',(2.4+Math.random()*2.8)+'s');p.style.setProperty('--drift',`${Math.random()*180-90}px`);document.body.appendChild(p);setTimeout(()=>p.remove(),5600)}}
 
 </script></body></html>
+
+
+
+
 
 
 
